@@ -44,13 +44,8 @@ public class SesionService {
     }
 
     // Resultado interno que usara AuthService.
-    public record SesionEmitida(
-            Long idSesion,
-            String refreshToken,
-            Instant expiracion,
-            Usuario usuario
-    ) {
-    }
+    public record SesionEmitida(Long idSesion, String refreshToken,
+            Instant expiracion, Usuario usuario) {}
 
     // 1. Crear una sesion despues de un login correcto.
     @Transactional
@@ -81,12 +76,18 @@ public class SesionService {
                                 new BadCredentialsException(
                                         "Credencial de renovacion invalida")
                         );
-
         Instant ahora = Instant.now();
 
-        if (!credencial.estaVigente(ahora)) {
+        if (credencial.getFechaRevocacion() != null) {
             throw new BadCredentialsException(
                     "Credencial de renovacion invalida");
+        }
+
+        if (credencial.getFechaExpiracion() == null
+                || !credencial.getFechaExpiracion().isAfter(ahora)) {
+
+            throw new CredencialVencidaException(
+                    "Credencial de renovacion vencida");
         }
 
         Usuario usuario = credencial.getUsuario();
@@ -110,37 +111,47 @@ public class SesionService {
 
     // 3. Revocar una sesion de un usuario autenticado.
     @Transactional
-    public void revocarSesion(
-            Long idSesion,
-            Long idUsuario) {
+    public void revocarSesionPorToken(String refreshToken, Long idUsuario) {
 
-        if (idSesion == null || idUsuario == null) {
+        if (idUsuario == null) {
             throw new BadCredentialsException(
                     "Sesion invalida");
         }
 
+        // Comprobar el formato de la credencial.
+        validarFormatoToken(refreshToken);
+
+        // Buscar la credencial por su hash.
+        String hash = calcularHash(refreshToken);
+
         CredencialRenovacion credencial =
-                credencialRepository.findByIdParaActualizar(idSesion)
+                credencialRepository.findByTokenHash(hash)
                         .orElseThrow(() ->
                                 new BadCredentialsException(
                                         "Sesion invalida")
                         );
 
-        if (!credencial.getUsuario()
-                .getId()
-                .equals(idUsuario)) {
+        // Comprobar que pertenece al usuario autenticado.
+        Usuario usuario = credencial.getUsuario();
+
+        if (usuario == null
+                || !idUsuario.equals(usuario.getId())) {
 
             throw new BadCredentialsException(
                     "Sesion invalida");
         }
 
-        if (credencial.getFechaRevocacion() == null) {
-
-            credencial.setFechaRevocacion(Instant.now());
-            credencial.setMotivoRevocacion(MOTIVO_CIERRE);
-
-            credencialRepository.save(credencial);
+        // Comprobar que no haya sido revocada.
+        if (credencial.getFechaRevocacion() != null) {
+            throw new BadCredentialsException(
+                    "Sesion invalida");
         }
+
+        // Revocar la credencial.
+        credencial.setFechaRevocacion(Instant.now());
+        credencial.setMotivoRevocacion("CIERRE_SESION");
+
+        credencialRepository.save(credencial);
     }
 
     // 4. Revocar todas las credenciales de un usuario.
@@ -157,7 +168,6 @@ public class SesionService {
                         .findByUsuario_IdAndFechaRevocacionIsNull(
                                 idUsuario
                         );
-
         Instant ahora = Instant.now();
 
         for (CredencialRenovacion credencial : credenciales) {
@@ -165,13 +175,11 @@ public class SesionService {
             credencial.setFechaRevocacion(ahora);
             credencial.setMotivoRevocacion(MOTIVO_CIERRE_TOTAL);
         }
-
         credencialRepository.saveAll(credenciales);
     }
 
     // Guarda una credencial nueva y devuelve el token original.
-    private SesionEmitida guardarNuevaCredencial(
-            Usuario usuario) {
+    private SesionEmitida guardarNuevaCredencial(Usuario usuario) {
 
         byte[] bytes = new byte[BYTES_TOKEN];
 
@@ -208,8 +216,7 @@ public class SesionService {
     // Verifica que el refresh token tenga el formato esperado.
     private void validarFormatoToken(String refreshToken) {
 
-        if (refreshToken == null
-                || !refreshToken.matches("[A-Za-z0-9_-]{43}")) {
+        if (refreshToken == null || !refreshToken.matches("[A-Za-z0-9_-]{43}")) {
 
             throw new BadCredentialsException(
                     "Credencial de renovacion invalida");
@@ -235,4 +242,13 @@ public class SesionService {
                     "SHA-256 no esta disponible", ex);
         }
     }
+
+    public static class CredencialVencidaException
+            extends BadCredentialsException {
+
+        public CredencialVencidaException(String mensaje) {
+            super(mensaje);
+        }
+    }
+
 }
