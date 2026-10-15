@@ -52,7 +52,7 @@ public class SesionService {
     public SesionEmitida crearSesion(Usuario usuario) {
 
         if (usuario == null
-                || usuario.getId() == null
+                || usuario.getIdUsuario() == null
                 || !Boolean.TRUE.equals(usuario.getActivo())) {
 
             throw new BadCredentialsException(
@@ -135,7 +135,7 @@ public class SesionService {
         Usuario usuario = credencial.getUsuario();
 
         if (usuario == null
-                || !idUsuario.equals(usuario.getId())) {
+                || !idUsuario.equals(usuario.getIdUsuario())) {
 
             throw new BadCredentialsException(
                     "Sesion invalida");
@@ -165,7 +165,7 @@ public class SesionService {
 
         List<CredencialRenovacion> credenciales =
                 credencialRepository
-                        .findByUsuario_IdAndFechaRevocacionIsNull(
+                        .findByUsuario_IdUsuarioAndFechaRevocacionIsNull(
                                 idUsuario
                         );
         Instant ahora = Instant.now();

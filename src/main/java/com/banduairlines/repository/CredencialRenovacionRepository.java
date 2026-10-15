@@ -26,10 +26,10 @@ public interface CredencialRenovacionRepository
 
     // Busca las credenciales no revocadas de un usuario.
     @Lock(LockModeType.PESSIMISTIC_WRITE) List<CredencialRenovacion>
-    findByUsuario_IdAndFechaRevocacionIsNull(Long idUsuario);
+    findByUsuario_IdUsuarioAndFechaRevocacionIsNull(Long idUsuario);
 
     // Comprueba que una sesion exista, pertenezca al usuario, no este revocada ni haya expirado.
-    boolean existsByIdAndUsuario_IdAndFechaRevocacionIsNullAndFechaExpiracionAfter(
+    boolean existsByIdAndUsuario_IdUsuarioAndFechaRevocacionIsNullAndFechaExpiracionAfter(
             Long idSesion, Long idUsuario, Instant ahora
     );
 }

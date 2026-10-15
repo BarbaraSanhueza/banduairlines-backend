@@ -24,24 +24,25 @@ public class Usuario {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @Column(name = "id")
+    private Long idUsuario;
 
-    @Column(nullable = false, unique = true, length = 150)
-    private String email; 
+    @Column(name = "email", nullable = false, unique = true, length = 150)
+    private String correo;
 
     @Column(name = "password_hash", nullable = false)
-    private String passwordHash; 
+    private String contrasenaHash;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default
     private RolUsuario rol = RolUsuario.PASAJERO; 
 
-    @Column(nullable = false, length = 80)
-    private String nombre; 
+    @Column(name = "nombre", nullable = false, length = 80)
+    private String nombres;
 
-    @Column(nullable = false, length = 80)
-    private String apellido; 
+    @Column(name = "apellido", nullable = false, length = 80)
+    private String apellidos;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "tipo_documento")
@@ -62,11 +63,11 @@ public class Usuario {
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
+    private LocalDateTime fechaCreacion;
 
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt; 
+    private LocalDateTime fechaActualizacion;
 
     // --- RELACIONES ---
 

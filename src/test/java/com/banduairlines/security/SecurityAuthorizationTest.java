@@ -4,6 +4,7 @@ package com.banduairlines.security;
 import com.banduairlines.model.Usuario;
 import com.banduairlines.model.enums.RolUsuario;
 import com.banduairlines.repository.UsuarioRepository;
+import com.banduairlines.repository.CredencialRenovacionRepository;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -50,12 +51,15 @@ class SecurityAuthorizationTest {
     @Autowired
     private UsuarioRepository usuarioRepository;
 
+    @Autowired
+    private CredencialRenovacionRepository credencialRepository;
+
     private MockMvc mockMvc;
 
     @BeforeEach
     void configurar() {
 
-        reset(jwtService, usuarioRepository);
+        reset(jwtService, usuarioRepository, credencialRepository);
 
         mockMvc = MockMvcBuilders
                 .webAppContextSetup(contexto)
@@ -67,13 +71,18 @@ class SecurityAuthorizationTest {
 
         Usuario usuario = new Usuario();
 
-        usuario.setId(15L);
-        usuario.setEmail("prueba@banduairlines.com");
+        usuario.setIdUsuario(15L);
+        usuario.setCorreo("prueba@banduairlines.com");
         usuario.setRol(rol);
         usuario.setActivo(true);
 
-        when(jwtService.obtenerIdUsuario(TOKEN))
-                .thenReturn(15L);
+        when(jwtService.obtenerDatosAcceso(TOKEN))
+                .thenReturn(new JwtService.DatosAcceso(15L, 99L));
+
+        when(credencialRepository
+                .existsByIdAndUsuario_IdUsuarioAndFechaRevocacionIsNullAndFechaExpiracionAfter(
+                        eq(99L), eq(15L), any()
+                )).thenReturn(true);
 
         when(usuarioRepository.findById(15L))
                 .thenReturn(Optional.of(usuario));
@@ -169,13 +178,20 @@ class SecurityAuthorizationTest {
         }
 
         @Bean
+        CredencialRenovacionRepository credencialRenovacionRepository() {
+            return mock(CredencialRenovacionRepository.class);
+        }
+
+        @Bean
         JwtAuthenticationFilter jwtAuthenticationFilter(
                 JwtService jwtService,
-                UsuarioRepository usuarioRepository) {
+                UsuarioRepository usuarioRepository,
+                CredencialRenovacionRepository credencialRepository) {
 
             return new JwtAuthenticationFilter(
                     jwtService,
-                    usuarioRepository
+                    usuarioRepository,
+                    credencialRepository
             );
         }
 

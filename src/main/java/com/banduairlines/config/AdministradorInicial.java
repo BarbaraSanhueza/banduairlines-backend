@@ -57,17 +57,17 @@ public class AdministradorInicial implements ApplicationRunner {
             return;
         }
 
-        if (usuarioRepository.existsByEmail(emailNormalizado)) {
+        if (usuarioRepository.existsByCorreo(emailNormalizado)) {
             log.info("El administrador con email '{}' ya existe. No se realizaron cambios.", emailNormalizado);
             return;
         }
 
         Usuario admin = Usuario.builder()
-                .email(emailNormalizado)
-                .passwordHash(passwordEncoder.encode(adminPassword))
+                .correo(emailNormalizado)
+                .contrasenaHash(passwordEncoder.encode(adminPassword))
                 .rol(RolUsuario.ADMINISTRADOR)
-                .nombre("Administrador")
-                .apellido("Sistema")
+                .nombres("Administrador")
+                .apellidos("Sistema")
                 .activo(true)
                 .build();
 

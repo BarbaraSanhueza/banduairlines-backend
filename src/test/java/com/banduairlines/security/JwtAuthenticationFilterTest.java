@@ -4,6 +4,7 @@ package com.banduairlines.security;
 import com.banduairlines.model.Usuario;
 import com.banduairlines.model.enums.RolUsuario;
 import com.banduairlines.repository.UsuarioRepository;
+import com.banduairlines.repository.CredencialRenovacionRepository;
 
 import io.jsonwebtoken.JwtException;
 
@@ -28,6 +29,7 @@ class JwtAuthenticationFilterTest {
 
     private JwtService jwtService;
     private UsuarioRepository usuarioRepository;
+    private CredencialRenovacionRepository credencialRepository;
     private JwtAuthenticationFilter filtro;
 
     @BeforeEach
@@ -36,10 +38,12 @@ class JwtAuthenticationFilterTest {
         jwtService = mock(JwtService.class);
 
         usuarioRepository = mock(UsuarioRepository.class);
+        credencialRepository = mock(CredencialRenovacionRepository.class);
 
         filtro = new JwtAuthenticationFilter(
                 jwtService,
-                usuarioRepository
+                usuarioRepository,
+                credencialRepository
         );
 
         SecurityContextHolder.clearContext();
@@ -56,8 +60,8 @@ class JwtAuthenticationFilterTest {
 
         Usuario usuario = new Usuario();
 
-        usuario.setId(15L);
-        usuario.setEmail("usuario@banduairlines.com");
+        usuario.setIdUsuario(15L);
+        usuario.setCorreo("usuario@banduairlines.com");
         usuario.setRol(rol);
         usuario.setActivo(activo);
 
@@ -108,7 +112,8 @@ class JwtAuthenticationFilterTest {
 
         verifyNoInteractions(
                 jwtService,
-                usuarioRepository
+                usuarioRepository,
+                credencialRepository
         );
     }
 
@@ -122,8 +127,13 @@ class JwtAuthenticationFilterTest {
         );
 
         when(
-                jwtService.obtenerIdUsuario("token-valido")
-        ).thenReturn(15L);
+                jwtService.obtenerDatosAcceso("token-valido")
+        ).thenReturn(new JwtService.DatosAcceso(15L, 99L));
+
+        when(credencialRepository
+                .existsByIdAndUsuario_IdUsuarioAndFechaRevocacionIsNullAndFechaExpiracionAfter(
+                        eq(99L), eq(15L), any()
+                )).thenReturn(true);
 
         when(
                 usuarioRepository.findById(15L)
@@ -163,7 +173,7 @@ class JwtAuthenticationFilterTest {
             throws Exception {
 
         when(
-                jwtService.obtenerIdUsuario("token-invalido")
+                jwtService.obtenerDatosAcceso("token-invalido")
         ).thenThrow(
                 new JwtException("Firma JWT invalida")
         );
@@ -188,8 +198,13 @@ class JwtAuthenticationFilterTest {
         );
 
         when(
-                jwtService.obtenerIdUsuario("token-valido")
-        ).thenReturn(15L);
+                jwtService.obtenerDatosAcceso("token-valido")
+        ).thenReturn(new JwtService.DatosAcceso(15L, 99L));
+
+        when(credencialRepository
+                .existsByIdAndUsuario_IdUsuarioAndFechaRevocacionIsNullAndFechaExpiracionAfter(
+                        eq(99L), eq(15L), any()
+                )).thenReturn(true);
 
         when(
                 usuarioRepository.findById(15L)
@@ -210,8 +225,13 @@ class JwtAuthenticationFilterTest {
             throws Exception {
 
         when(
-                jwtService.obtenerIdUsuario("token-valido")
-        ).thenReturn(15L);
+                jwtService.obtenerDatosAcceso("token-valido")
+        ).thenReturn(new JwtService.DatosAcceso(15L, 99L));
+
+        when(credencialRepository
+                .existsByIdAndUsuario_IdUsuarioAndFechaRevocacionIsNullAndFechaExpiracionAfter(
+                        eq(99L), eq(15L), any()
+                )).thenReturn(true);
 
         when(
                 usuarioRepository.findById(15L)
@@ -237,8 +257,13 @@ class JwtAuthenticationFilterTest {
         );
 
         when(
-                jwtService.obtenerIdUsuario("token-valido")
-        ).thenReturn(15L);
+                jwtService.obtenerDatosAcceso("token-valido")
+        ).thenReturn(new JwtService.DatosAcceso(15L, 99L));
+
+        when(credencialRepository
+                .existsByIdAndUsuario_IdUsuarioAndFechaRevocacionIsNullAndFechaExpiracionAfter(
+                        eq(99L), eq(15L), any()
+                )).thenReturn(true);
 
         when(
                 usuarioRepository.findById(15L)

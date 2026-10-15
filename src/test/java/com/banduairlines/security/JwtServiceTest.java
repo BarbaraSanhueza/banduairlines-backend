@@ -44,8 +44,8 @@ class JwtServiceTest {
 
         Usuario usuario = new Usuario();
 
-        usuario.setId(15L);
-        usuario.setEmail("pasajero@banduairlines.com");
+        usuario.setIdUsuario(15L);
+        usuario.setCorreo("pasajero@banduairlines.com");
         usuario.setRol(RolUsuario.PASAJERO);
         usuario.setActivo(true);
 
@@ -57,7 +57,7 @@ class JwtServiceTest {
 
         Usuario usuario = crearUsuario();
 
-        String token = jwtService.generarToken(usuario);
+        String token = jwtService.generarToken(usuario, 99L);
 
         Claims claims =
                 jwtService.validarYObtenerClaims(token);
@@ -77,6 +77,8 @@ class JwtServiceTest {
                 claims.get("tipo", String.class)
         ).isEqualTo("ACCESS");
 
+        assertThat(claims.get("sid", String.class)).isEqualTo("99");
+
         assertThat(claims.getIssuedAt()).isNotNull();
         assertThat(claims.getExpiration()).isNotNull();
     }
@@ -85,7 +87,7 @@ class JwtServiceTest {
     void obtenerIdUsuario_conTokenValido_retornaId() {
 
         String token =
-                jwtService.generarToken(crearUsuario());
+                jwtService.generarToken(crearUsuario(), 99L);
 
         Long id = jwtService.obtenerIdUsuario(token);
 
@@ -106,7 +108,7 @@ class JwtServiceTest {
                 new JwtService(otroSecreto, 900000);
 
         String token =
-                otroJwtService.generarToken(crearUsuario());
+                otroJwtService.generarToken(crearUsuario(), 99L);
 
         // Nuestro servicio no debe aceptar esa firma.
         assertThatThrownBy(() ->

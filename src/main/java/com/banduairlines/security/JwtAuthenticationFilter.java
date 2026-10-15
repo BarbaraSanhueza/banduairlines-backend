@@ -67,7 +67,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             // 2. Comprobar que la sesion siga vigente.
             boolean sesionVigente =
                     credencialRepository
-                            .existsByIdAndUsuario_IdAndFechaRevocacionIsNullAndFechaExpiracionAfter(
+                            .existsByIdAndUsuario_IdUsuarioAndFechaRevocacionIsNullAndFechaExpiracionAfter(
                                     idSesion,
                                     idUsuario,
                                     Instant.now()
@@ -97,8 +97,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     // 5. Construir el principal autenticado.
                     UsuarioAutenticado principal =
                             new UsuarioAutenticado(
-                                    usuario.getId(),
-                                    usuario.getEmail(),
+                                    usuario.getIdUsuario(),
+                                    usuario.getCorreo(),
                                     usuario.getRol()
                             );
 

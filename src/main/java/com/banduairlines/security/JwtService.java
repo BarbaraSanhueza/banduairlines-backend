@@ -43,7 +43,7 @@ public class JwtService {
     // Generar access token asociado a una sesion.
     public String generarToken(Usuario usuario, Long idSesion) {
 
-        if (usuario == null || usuario.getId() == null || usuario.getEmail() == null
+        if (usuario == null || usuario.getIdUsuario() == null || usuario.getCorreo() == null
                 || usuario.getRol() == null) {
 
             throw new IllegalArgumentException(
@@ -62,8 +62,8 @@ public class JwtService {
         );
 
         return Jwts.builder()
-                .setSubject(usuario.getId().toString())
-                .claim("correo", usuario.getEmail())
+                .setSubject(usuario.getIdUsuario().toString())
+                .claim("correo", usuario.getCorreo())
                 .claim("rol", usuario.getRol().name())
                 .claim("tipo", TIPO_ACCESS)
                 .claim("sid", idSesion.toString())

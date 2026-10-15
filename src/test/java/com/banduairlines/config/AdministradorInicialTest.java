@@ -33,7 +33,7 @@ class AdministradorInicialTest {
 
         inicial.run(null);
 
-        verify(usuarioRepository, never()).existsByEmail(any());
+        verify(usuarioRepository, never()).existsByCorreo(any());
         verify(usuarioRepository, never()).save(any());
     }
 
@@ -45,7 +45,7 @@ class AdministradorInicialTest {
 
         inicial.run(null);
 
-        verify(usuarioRepository, never()).existsByEmail(any());
+        verify(usuarioRepository, never()).existsByCorreo(any());
         verify(usuarioRepository, never()).save(any());
     }
 
@@ -57,7 +57,7 @@ class AdministradorInicialTest {
 
         inicial.run(null);
 
-        verify(usuarioRepository, never()).existsByEmail(any());
+        verify(usuarioRepository, never()).existsByCorreo(any());
         verify(usuarioRepository, never()).save(any());
     }
 
@@ -66,11 +66,11 @@ class AdministradorInicialTest {
         AdministradorInicial inicial = new AdministradorInicial(
                 usuarioRepository, passwordEncoder, "Admin@BanduAirlines.com ", "passwordSeguro123"
         );
-        when(usuarioRepository.existsByEmail("admin@banduairlines.com")).thenReturn(true);
+        when(usuarioRepository.existsByCorreo("admin@banduairlines.com")).thenReturn(true);
 
         inicial.run(null);
 
-        verify(usuarioRepository).existsByEmail("admin@banduairlines.com");
+        verify(usuarioRepository).existsByCorreo("admin@banduairlines.com");
         verify(usuarioRepository, never()).save(any());
     }
 
@@ -79,7 +79,7 @@ class AdministradorInicialTest {
         AdministradorInicial inicial = new AdministradorInicial(
                 usuarioRepository, passwordEncoder, " Admin@BanduAirlines.com ", "passwordSeguro123"
         );
-        when(usuarioRepository.existsByEmail("admin@banduairlines.com")).thenReturn(false);
+        when(usuarioRepository.existsByCorreo("admin@banduairlines.com")).thenReturn(false);
         when(passwordEncoder.encode("passwordSeguro123")).thenReturn("encodedPasswordHash");
 
         inicial.run(null);
@@ -88,11 +88,11 @@ class AdministradorInicialTest {
         verify(usuarioRepository).save(captor.capture());
 
         Usuario guardado = captor.getValue();
-        assertThat(guardado.getEmail()).isEqualTo("admin@banduairlines.com");
-        assertThat(guardado.getPasswordHash()).isEqualTo("encodedPasswordHash");
+        assertThat(guardado.getCorreo()).isEqualTo("admin@banduairlines.com");
+        assertThat(guardado.getContrasenaHash()).isEqualTo("encodedPasswordHash");
         assertThat(guardado.getRol()).isEqualTo(RolUsuario.ADMINISTRADOR);
-        assertThat(guardado.getNombre()).isEqualTo("Administrador");
-        assertThat(guardado.getApellido()).isEqualTo("Sistema");
+        assertThat(guardado.getNombres()).isEqualTo("Administrador");
+        assertThat(guardado.getApellidos()).isEqualTo("Sistema");
         assertThat(guardado.getActivo()).isTrue();
     }
 }

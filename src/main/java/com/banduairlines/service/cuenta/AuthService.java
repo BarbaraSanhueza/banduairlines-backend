@@ -45,20 +45,20 @@ public class AuthService {
                 .trim()
                 .toLowerCase(Locale.ROOT);
 
-        Usuario usuario = usuarioRepository.findByEmail(correo)
+        Usuario usuario = usuarioRepository.findByCorreo(correo)
                 .orElseThrow(this::credencialesInvalidas);
 
         // No permitir el ingreso de cuentas inactivas.
         if (!Boolean.TRUE.equals(usuario.getActivo())) {throw credencialesInvalidas();}
 
         // La cuenta debe tener contraseña y rol.
-        if (usuario.getPasswordHash() == null
+        if (usuario.getContrasenaHash() == null
                 || usuario.getRol() == null) {throw credencialesInvalidas();}
 
         // Comparar la contraseña con el hash BCrypt.
         boolean contrasenaCorrecta = passwordEncoder.matches(
                 solicitud.contrasena(),
-                usuario.getPasswordHash()
+                usuario.getContrasenaHash()
         );
 
         if (!contrasenaCorrecta) {throw credencialesInvalidas();}
@@ -133,10 +133,10 @@ public class AuthService {
 
         RespuestaUsuarioSesion usuarioRespuesta =
                 new RespuestaUsuarioSesion(
-                        usuario.getId(),
-                        usuario.getNombre(),
-                        usuario.getApellido(),
-                        usuario.getEmail(),
+                        usuario.getIdUsuario(),
+                        usuario.getNombres(),
+                        usuario.getApellidos(),
+                        usuario.getCorreo(),
                         usuario.getRol()
                 );
 
