@@ -1,23 +1,20 @@
-
 package com.banduairlines.security;
 
 import com.banduairlines.model.Usuario;
+import com.banduairlines.repository.CredencialRenovacionRepository;
 import com.banduairlines.repository.UsuarioRepository;
-
 import io.jsonwebtoken.JwtException;
-
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
-
 import java.io.IOException;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -26,14 +23,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final UsuarioRepository usuarioRepository;
+    private final CredencialRenovacionRepository credencialRepository;
 
-    // Constructor: recibe el servicio JWT y el repositorio.
     public JwtAuthenticationFilter(
             JwtService jwtService,
-            UsuarioRepository usuarioRepository) {
+            UsuarioRepository usuarioRepository,
+            CredencialRenovacionRepository credencialRepository) {
 
         this.jwtService = jwtService;
         this.usuarioRepository = usuarioRepository;
+        this.credencialRepository = credencialRepository;
     }
 
     @Override
@@ -43,11 +42,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             FilterChain chain)
             throws ServletException, IOException {
 
-        // 1. Obtener la cabecera Authorization.
         String autorizacion =
                 request.getHeader("Authorization");
 
-        // 2. Si no hay Bearer token, continuar sin autenticar.
+        // Peticiones sin Bearer: continuar sin autenticar.
         if (autorizacion == null
                 || !autorizacion.startsWith("Bearer ")) {
 
@@ -55,16 +53,36 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        // 3. Extraer el JWT de la cabecera.
         String token = autorizacion.substring(7).trim();
 
         try {
 
-            // 4. Validar JWT y obtener el ID del usuario.
-            Long idUsuario =
-                    jwtService.obtenerIdUsuario(token);
+            // 1. Validar el JWT y obtener usuario y sesion.
+            JwtService.DatosAcceso datos =
+                    jwtService.obtenerDatosAcceso(token);
 
-            // 5. Buscar al usuario en la base de datos.
+            Long idUsuario = datos.idUsuario();
+            Long idSesion = datos.idSesion();
+
+            // 2. Comprobar que la sesion siga vigente.
+            boolean sesionVigente =
+                    credencialRepository
+                            .existsByIdAndUsuario_IdAndFechaRevocacionIsNullAndFechaExpiracionAfter(
+                                    idSesion,
+                                    idUsuario,
+                                    Instant.now()
+                            );
+
+            if (!sesionVigente) {
+
+                // La sesion fue revocada, expiro o no existe.
+                SecurityContextHolder.clearContext();
+
+                chain.doFilter(request, response);
+                return;
+            }
+
+            // 3. Buscar al usuario actual en PostgreSQL.
             Optional<Usuario> usuarioOptional =
                     usuarioRepository.findById(idUsuario);
 
@@ -72,12 +90,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                 Usuario usuario = usuarioOptional.get();
 
-                // 6. Comprobar que la cuenta este activa
-                //    y tenga un rol asignado.
+                // 4. Verificar cuenta activa y rol.
                 if (Boolean.TRUE.equals(usuario.getActivo())
                         && usuario.getRol() != null) {
 
-                    // 7. Crear el principal autenticado.
+                    // 5. Construir el principal autenticado.
                     UsuarioAutenticado principal =
                             new UsuarioAutenticado(
                                     usuario.getId(),
@@ -85,13 +102,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     usuario.getRol()
                             );
 
-                    // 8. Asignar la autoridad correspondiente.
                     SimpleGrantedAuthority autoridad =
                             new SimpleGrantedAuthority(
                                     "ROLE_" + usuario.getRol().name()
                             );
 
-                    // 9. Crear el objeto Authentication.
                     UsernamePasswordAuthenticationToken autenticacion =
                             new UsernamePasswordAuthenticationToken(
                                     principal,
@@ -99,7 +114,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     List.of(autoridad)
                             );
 
-                    // 10. Registrar al usuario en Spring Security.
+                    // 6. Autenticar al usuario.
                     SecurityContextHolder.getContext()
                             .setAuthentication(autenticacion);
                 }
@@ -107,28 +122,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         } catch (JwtException | IllegalArgumentException ex) {
 
-            // JWT invalido o expirado.
-            // La peticion continuara sin autenticacion.
+            // Token invalido, expirado o sin sesion.
             SecurityContextHolder.clearContext();
         }
 
-        // 11. Continuar con el siguiente filtro.
+        // 7. Continuar con Spring Security.
         chain.doFilter(request, response);
     }
 }
-
-        /*
-           ======================= INICIO ZONA MÓDULO CUENTA =======================
-           TODO(CUENTA): implementar la validación del JWT aquí. Pasos esperados:
-            1. Leer el header "Authorization: Bearer <token>". Si no existe, continuar sin autenticar.
-            2. Validar firma y expiración con la clave app.jwt.secret.
-            3. Si es válido, crear el Authentication y dejarlo en el contexto:
-                 var principal = new UsuarioAutenticado(id, email, rol);
-                 var auth = new UsernamePasswordAuthenticationToken(
-                         principal, null,
-                         List.of(new SimpleGrantedAuthority("ROLE_" + rol)));   // ver sección 7 del README
-                 SecurityContextHolder.getContext().setAuthentication(auth);
-            4. Si el token es inválido o expiró: NO lanzar excepción; SecurityContextHolder.clearContext()
-               y continuar. La cadena responderá 401 por sí sola (RestAuthenticationEntryPoint).
-           ======================== FIN ZONA MÓDULO CUENTA =========================
-        */

@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import java.util.List;
+import java.time.Instant;
 import java.util.Optional;
 
 @Repository
@@ -16,21 +17,19 @@ public interface CredencialRenovacionRepository
 
     // Busca y bloquea una credencial durante su renovacion.
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    Optional<CredencialRenovacion> findByTokenHash(
-            String tokenHash
-    );
+    Optional<CredencialRenovacion> findByTokenHash(String tokenHash);
 
     // Busca y bloquea una sesion por su identificador.
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT c FROM CredencialRenovacion c WHERE c.id = :id")
-    Optional<CredencialRenovacion> findByIdParaActualizar(
-            @Param("id") Long id
-    );
+    Optional<CredencialRenovacion> findByIdParaActualizar(@Param("id") Long id);
 
     // Busca las credenciales no revocadas de un usuario.
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
-    List<CredencialRenovacion>
-    findByUsuario_IdAndFechaRevocacionIsNull(
-            Long idUsuario
+    @Lock(LockModeType.PESSIMISTIC_WRITE) List<CredencialRenovacion>
+    findByUsuario_IdAndFechaRevocacionIsNull(Long idUsuario);
+
+    // Comprueba que una sesion exista, pertenezca al usuario, no este revocada ni haya expirado.
+    boolean existsByIdAndUsuario_IdAndFechaRevocacionIsNullAndFechaExpiracionAfter(
+            Long idSesion, Long idUsuario, Instant ahora
     );
 }

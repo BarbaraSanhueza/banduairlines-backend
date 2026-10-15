@@ -49,16 +49,11 @@ public class AuthService {
                 .orElseThrow(this::credencialesInvalidas);
 
         // No permitir el ingreso de cuentas inactivas.
-        if (!Boolean.TRUE.equals(usuario.getActivo())) {
-            throw credencialesInvalidas();
-        }
+        if (!Boolean.TRUE.equals(usuario.getActivo())) {throw credencialesInvalidas();}
 
         // La cuenta debe tener contraseña y rol.
         if (usuario.getPasswordHash() == null
-                || usuario.getRol() == null) {
-
-            throw credencialesInvalidas();
-        }
+                || usuario.getRol() == null) {throw credencialesInvalidas();}
 
         // Comparar la contraseña con el hash BCrypt.
         boolean contrasenaCorrecta = passwordEncoder.matches(
@@ -66,9 +61,7 @@ public class AuthService {
                 usuario.getPasswordHash()
         );
 
-        if (!contrasenaCorrecta) {
-            throw credencialesInvalidas();
-        }
+        if (!contrasenaCorrecta) {throw credencialesInvalidas();}
 
         // Crear la sesion y su refresh token.
         SesionService.SesionEmitida sesion =
@@ -136,8 +129,7 @@ public class AuthService {
 
         Usuario usuario = sesion.usuario();
 
-        String accessToken =
-                jwtService.generarToken(usuario);
+        String accessToken = jwtService.generarToken(usuario, sesion.idSesion());
 
         RespuestaUsuarioSesion usuarioRespuesta =
                 new RespuestaUsuarioSesion(

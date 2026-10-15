@@ -1,8 +1,6 @@
-
 package com.banduairlines.security;
 
 import com.banduairlines.model.Usuario;
-
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;
 import io.jsonwebtoken.JwtException;
@@ -10,10 +8,8 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
-
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-
 import java.security.Key;
 import java.util.Date;
 
@@ -25,7 +21,6 @@ public class JwtService {
     private final Key claveFirma;
     private final long expiracionMs;
 
-    // Constructor: obtiene las propiedades del JWT.
     public JwtService(
             @Value("${app.jwt.secret}") String secreto,
             @Value("${app.jwt.expiration-ms}") long expiracionMs) {
@@ -42,16 +37,22 @@ public class JwtService {
         this.expiracionMs = expiracionMs;
     }
 
-    // Genera un access token para un usuario registrado.
-    public String generarToken(Usuario usuario) {
+    // Representa la identidad obtenida de un JWT valido.
+    public record DatosAcceso(Long idUsuario, Long idSesion) {}
 
-        if (usuario == null
-                || usuario.getId() == null
-                || usuario.getEmail() == null
+    // Generar access token asociado a una sesion.
+    public String generarToken(Usuario usuario, Long idSesion) {
+
+        if (usuario == null || usuario.getId() == null || usuario.getEmail() == null
                 || usuario.getRol() == null) {
 
             throw new IllegalArgumentException(
                     "El usuario debe tener ID, correo y rol");
+        }
+
+        if (idSesion == null || idSesion <= 0) {
+            throw new IllegalArgumentException(
+                    "El ID de sesion debe ser valido");
         }
 
         Date ahora = new Date();
@@ -65,6 +66,7 @@ public class JwtService {
                 .claim("correo", usuario.getEmail())
                 .claim("rol", usuario.getRol().name())
                 .claim("tipo", TIPO_ACCESS)
+                .claim("sid", idSesion.toString())
                 .setIssuedAt(ahora)
                 .setExpiration(expiracion)
                 .signWith(
@@ -74,7 +76,7 @@ public class JwtService {
                 .compact();
     }
 
-    // Valida la firma, el tipo de token y su expiracion.
+    // Validar firma, tipo y fechas del JWT.
     public Claims validarYObtenerClaims(String token) {
 
         if (token == null || token.isBlank()) {
@@ -128,24 +130,59 @@ public class JwtService {
         return claims;
     }
 
-    // Obtiene el ID del usuario indicado en el JWT.
-    public Long obtenerIdUsuario(String token) {
+    // Obtener usuario y sesion, validando el JWT una sola vez.
+    public DatosAcceso obtenerDatosAcceso(String token) {
 
         Claims claims = validarYObtenerClaims(token);
 
+        String idSesion = claims.get("sid", String.class);
+
+        if (idSesion == null || idSesion.isBlank()) {
+            throw new JwtException(
+                    "El JWT no contiene un ID de sesion");
+        }
         try {
-            return Long.valueOf(claims.getSubject());
+            Long idUsuario =
+                    Long.valueOf(claims.getSubject());
+            Long sesion =
+                    Long.valueOf(idSesion);
+
+            if (idUsuario <= 0 || sesion <= 0) {
+                throw new JwtException(
+                        "El JWT contiene identificadores invalidos");
+            }
+
+            return new DatosAcceso(
+                    idUsuario,
+                    sesion
+            );
 
         } catch (NumberFormatException ex) {
 
             throw new JwtException(
-                    "El JWT contiene un ID de usuario invalido",
+                    "El JWT contiene identificadores invalidos",
                     ex
             );
         }
     }
 
-    // Devuelve la duracion del access token en segundos.
+    // Mantener este metodo para codigo que solo necesita el ID.
+    public Long obtenerIdUsuario(String token) {
+
+        Claims claims = validarYObtenerClaims(token);
+
+        try {
+
+            return Long.valueOf(claims.getSubject());
+
+        } catch (NumberFormatException ex) {
+
+            throw new JwtException(
+                    "El JWT contiene un ID de usuario invalido", ex
+            );
+        }
+    }
+
     public long obtenerSegundosExpiracion() {
         return expiracionMs / 1000;
     }
